@@ -96,9 +96,9 @@ let subst (var_name : varid) (repl : expr) (exp : expr) : expr =
 let rec exp_to_concrete_string (exp : expr) : string =
   match exp with
   | Var x -> "x"
-  | Num x -> string_of_int x
-  | Bool x -> string_of_bool x
-	| Unop (u, e) -> exp_to_concrete_string e
+  | Num n -> string_of_int n
+  | Bool b -> string_of_bool b
+	| Unop (u, e) -> "negate " ^ exp_to_concrete_string e
   | Binop (b, e1, e2) ->
 			let binop_to_string (b : binop) : string =
 				match b with
@@ -114,15 +114,38 @@ let rec exp_to_concrete_string (exp : expr) : string =
 			"if " ^ exp_to_concrete_string e1 ^ " then " ^ exp_to_concrete_string e2
 			^ " else " ^ exp_to_concrete_string e3
 	| Fun (v, e) -> "fun " ^ v ^ " -> " ^ exp_to_concrete_string e
-	| Let (v, e1, e2) -> "let " ^ v ^ " = " ^ exp_to_concrete_string e1 
-											 ^ exp_to_concrete_string e2 
-	| Letrec (v, e1, e2) -> "let rec " ^ v ^ " = " ^ exp_to_concrete_string e1
-													^ exp_to_concrete_string e2
+	| Let (v, e1, e2) -> 
+			"let " ^ v ^ " = " ^ exp_to_concrete_string e1 ^ exp_to_concrete_string e2
+	| Letrec (v, e1, e2) ->
+			"let rec " ^ v ^ " = " ^ exp_to_concrete_string e1
+			^ exp_to_concrete_string e2
 	| Raise -> "raise Evalexception"
-	| Unassigned -> "Unassigned"
-	| App (e1, e2) -> " in " ^ exp_to_concrete_string e1 ^ exp_to_concrete_string e2 ;;
+	| Unassigned -> "unassigned"
+	| App (e1, e2) -> 
+			" in " ^ exp_to_concrete_string e1 ^ exp_to_concrete_string e2 ;;
 
 (* exp_to_abstract_string : expr -> string
    Returns a string representation of the abstract syntax of the expr *)
-let exp_to_abstract_string (exp : expr) : string =
-  failwith "exp_to_abstract_string not implemented" ;;
+let rec exp_to_abstract_string (exp : expr) : string =
+	match exp with
+	| Var x -> "Var (" ^ x ^ ")"
+  | Num n -> "Num(" ^ string_of_int n ^ ")"
+  | Bool b -> "Bool(" ^ string_of_bool b ^ ")"
+  | Unop (_u, e) -> "Negate(" ^ exp_to_abstract_string e ^ ")"
+	| Binop (_b, e1, e2) -> 
+			"Binop(" ^ exp_to_abstract_string e1 ^ ", "
+			^ exp_to_abstract_string e2 ^ ")"
+	| Conditional (e1, e2, e3) -> 
+			"Conditional(" ^ exp_to_abstract_string e1 ^ ", " 
+			^ exp_to_abstract_string e2 ^ ", " ^ exp_to_abstract_string e3 ^ ")"
+  | Fun (v, e) -> "Fun(" ^ v ^ ", " ^ exp_to_abstract_string e ^ ")"
+	| Let (v, e1, e2) -> 
+			"Let(" ^ v ^ exp_to_abstract_string e1 ^ ", " 
+			^ exp_to_abstract_string e2 ^ ")"
+	| Letrec (v, e1, e2) ->
+			"Let(" ^ v ^ exp_to_abstract_string e1 ^ ", "
+			^ exp_to_abstract_string e2 ^ ")"
+  | Raise -> "Raise"
+  | Unassigned -> "Unassigned"
+	| App (e1, e2) -> 
+			"App(" ^ exp_to_abstract_string e1 ^ ", " ^ exp_to_abstract_string e2 ^ ")" ;;
