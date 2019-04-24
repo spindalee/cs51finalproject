@@ -132,18 +132,26 @@ let rec exp_to_abstract_string (exp : expr) : string =
   | Num n -> "Num(" ^ string_of_int n ^ ")"
   | Bool b -> "Bool(" ^ string_of_bool b ^ ")"
   | Unop (_u, e) -> "Negate(" ^ exp_to_abstract_string e ^ ")"
-	| Binop (_b, e1, e2) -> 
-			"Binop(" ^ exp_to_abstract_string e1 ^ ", "
+	| Binop (b, e1, e2) ->
+			let binop_to_string (b : binop) : string =
+				match b with
+				| Plus -> "Plus"
+				| Minus -> "Minus"
+				| Times -> "Times"
+				| Equals -> "Equals"
+				| LessThan -> "LessThan"
+			in
+			"Binop(" ^ binop_to_string b ^ ", " ^ exp_to_abstract_string e1 ^ ", "
 			^ exp_to_abstract_string e2 ^ ")"
 	| Conditional (e1, e2, e3) -> 
 			"Conditional(" ^ exp_to_abstract_string e1 ^ ", " 
 			^ exp_to_abstract_string e2 ^ ", " ^ exp_to_abstract_string e3 ^ ")"
   | Fun (v, e) -> "Fun(" ^ v ^ ", " ^ exp_to_abstract_string e ^ ")"
 	| Let (v, e1, e2) -> 
-			"Let(" ^ v ^ exp_to_abstract_string e1 ^ ", " 
+			"Let(" ^ v ^ ", " ^ exp_to_abstract_string e1 ^ ", " 
 			^ exp_to_abstract_string e2 ^ ")"
 	| Letrec (v, e1, e2) ->
-			"Let(" ^ v ^ exp_to_abstract_string e1 ^ ", "
+			"Letrec(" ^ v ^ ", " ^ exp_to_abstract_string e1 ^ ", "
 			^ exp_to_abstract_string e2 ^ ")"
   | Raise -> "Raise"
   | Unassigned -> "Unassigned"
