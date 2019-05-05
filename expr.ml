@@ -66,19 +66,15 @@ let vars_of_list : string list -> varidset =
 let rec free_vars (exp : expr) : varidset =
 	match exp with
 	| Var x -> SS.singleton x
-	| Num _
-	| Bool _ -> SS.empty
+	| Num _ | Bool _ | Raise | Unassigned -> SS.empty
 	| Unop (_, e) -> free_vars e
-	| Binop (_, e1, e2) -> SS.union (free_vars e1) (free_vars e2)
+	| Binop (_, e1, e2) | App (e1, e2) -> SS.union (free_vars e1) (free_vars e2)
 	| Conditional (e1, e2, e3) -> 
 			SS.union (free_vars e1) (SS.union (free_vars e2) (free_vars e3))
-	| Fun (v, e) -> SS.diff (free_vars e) (SS.singleton v)
+	| Fun (v, e) -> SS.remove v (free_vars e)
 	| Let (v, e1, e2)
 	| Letrec (v, e1, e2) ->
-			SS.union (SS.diff (free_vars e2) (SS.singleton v)) (free_vars e1)
-	| Raise
-	| Unassigned -> SS.empty
-	| App (e1, e2) -> SS.union (free_vars e1) (free_vars e2) ;;
+			SS.union (SS.remove v (free_vars e2)) (free_vars e1) ;;
   
 (* new_varname : unit -> varid
    Return a fresh variable, constructed with a running counter a la
@@ -100,25 +96,30 @@ let new_varname =
 (* subst : varid -> expr -> expr -> expr
    Substitute repl for free occurrences of var_name in exp *)
 let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
-	match exp with
-	| Var x -> repl
-	| Num n -> Num n
-	| Bool b -> Bool b
-	| Unop (n, e) -> Unop (n, subst var_name repl e) 
-	| Binop (_b, e1, e2) -> 
-			Binop (_b, (subst var_name repl e1), (subst var_name repl e2)) 
-	| Conditional (e1, e2, e3) -> 
-	    Conditional (subst var_name repl e1, subst var_name repl e2,
-									 subst var_name repl e3)
-	| Fun (v, e) -> if v = var_name then Fun (v, e)
-									else Fun (v, subst var_name repl e)
-	| Let (v, e1, e2)
-	| Letrec (v, e1, e2) -> 
-	    if v = var_name then Let (v, subst var_name repl e1, e2)
-			else Let (v, subst var_name repl e1, subst var_name repl e2)
-	| Raise -> Raise
-	| Unassigned -> Unassigned
-	| App (e1, e2) -> App (subst var_name repl e1, subst var_name repl e2) ;;
+	let rec sub (exp : expr) : expr =
+		match exp with
+		| Var x -> if x = var_name then repl else exp
+		| Num _ | Bool _ | Raise | Unassigned -> exp
+		| Unop (n, e) -> Unop (n, sub e) 
+		| Binop (b, e1, e2) -> Binop (b, sub e1, sub e2) 
+		| Conditional (e1, e2, e3) -> Conditional (sub e1, sub e2, sub e3)
+		| Fun (v, e) -> if v = var_name then exp
+										else if SS.mem v (free_vars repl) then 
+											let z = new_varname () in
+											Fun (z, sub (subst v (Var z) e))
+										else Fun (v, sub e)
+		| Let (v, e1, e2) -> if v = var_name then Let (v, sub e1, e2)
+													else if SS.mem v (free_vars repl) then
+														let z = new_varname () in
+														Let (z, sub e1, sub (subst v (Var z) e2))
+													else Let (v, sub e1, sub e2)
+		| Letrec (v, e1, e2) -> if v = var_name then Letrec (v, sub e1, e2)
+														else if SS.mem v (free_vars repl) then
+														  let z = new_varname () in
+															Letrec (z, sub e1, sub (subst v (Var z) e2))
+														else Letrec (v, sub e1, sub e2)
+		| App (e1, e2) -> App (sub e1, sub e2)
+	in sub exp ;;
 
 (*......................................................................
   String representations of expressions
