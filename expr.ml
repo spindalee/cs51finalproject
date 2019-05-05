@@ -84,8 +84,10 @@ let rec free_vars (exp : expr) : varidset =
    Return a fresh variable, constructed with a running counter a la
    gensym. Assumes no variable names use the prefix "var". (Otherwise,
    they might accidentally be the same as a generated variable name.) *)
-let new_varname () : varid =
-  failwith "not yet" ;;
+let new_varname =
+	let ctr = ref ~-1 in
+	fun () -> ctr := !ctr + 1;
+	          "x" ^ string_of_int !ctr ;;
 
 (*......................................................................
   Substitution 
@@ -97,8 +99,26 @@ let new_varname () : varid =
 
 (* subst : varid -> expr -> expr -> expr
    Substitute repl for free occurrences of var_name in exp *)
-let subst (var_name : varid) (repl : expr) (exp : expr) : expr =
-  failwith "subst not implemented" ;;
+let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
+	match exp with
+	| Var x -> repl
+	| Num n -> Num n
+	| Bool b -> Bool b
+	| Unop (n, e) -> Unop (n, subst var_name repl e) 
+	| Binop (_b, e1, e2) -> 
+			Binop (_b, (subst var_name repl e1), (subst var_name repl e2)) 
+	| Conditional (e1, e2, e3) -> 
+	    Conditional (subst var_name repl e1, subst var_name repl e2,
+									 subst var_name repl e3)
+	| Fun (v, e) -> if v = var_name then Fun (v, e)
+									else Fun (v, subst var_name repl e)
+	| Let (v, e1, e2)
+	| Letrec (v, e1, e2) -> 
+	    if v = var_name then Let (v, subst var_name repl e1, e2)
+			else Let (v, subst var_name repl e1, subst var_name repl e2)
+	| Raise -> Raise
+	| Unassigned -> Unassigned
+	| App (e1, e2) -> App (subst var_name repl e1, subst var_name repl e2) ;;
 
 (*......................................................................
   String representations of expressions
