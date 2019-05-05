@@ -63,15 +63,29 @@ let vars_of_list : string list -> varidset =
 (* free_vars : expr -> varidset
    Return a set of the variable names that are free in expression
    exp *)
-let free_vars (exp : expr) : varidset =
-  failwith "free_vars not implemented" ;;
+let rec free_vars (exp : expr) : varidset =
+	match exp with
+	| Var x -> SS.singleton x
+	| Num _
+	| Bool _ -> SS.empty
+	| Unop (_, e) -> free_vars e
+	| Binop (_, e1, e2) -> SS.union (free_vars e1) (free_vars e2)
+	| Conditional (e1, e2, e3) -> 
+			SS.union (free_vars e1) (SS.union (free_vars e2) (free_vars e3))
+	| Fun (v, e) -> SS.diff (free_vars e) (SS.singleton v)
+	| Let (v, e1, e2)
+	| Letrec (v, e1, e2) ->
+			SS.union (SS.diff (free_vars e2) (SS.singleton v)) (free_vars e1)
+	| Raise
+	| Unassigned -> SS.empty
+	| App (e1, e2) -> SS.union (free_vars e1) (free_vars e2) ;;
   
 (* new_varname : unit -> varid
    Return a fresh variable, constructed with a running counter a la
    gensym. Assumes no variable names use the prefix "var". (Otherwise,
    they might accidentally be the same as a generated variable name.) *)
 let new_varname () : varid =
-  failwith "new_varname not implemented" ;;
+  failwith "not yet" ;;
 
 (*......................................................................
   Substitution 
@@ -98,7 +112,7 @@ let rec exp_to_concrete_string (exp : expr) : string =
   | Var x -> "x"
   | Num n -> string_of_int n
   | Bool b -> string_of_bool b
-	| Unop (u, e) -> "negate " ^ exp_to_concrete_string e
+	| Unop (_, e) -> "negate " ^ exp_to_concrete_string e
   | Binop (b, e1, e2) ->
 			let binop_to_string (b : binop) : string =
 				match b with
@@ -131,7 +145,7 @@ let rec exp_to_abstract_string (exp : expr) : string =
 	| Var x -> "Var (" ^ x ^ ")"
   | Num n -> "Num(" ^ string_of_int n ^ ")"
   | Bool b -> "Bool(" ^ string_of_bool b ^ ")"
-  | Unop (_u, e) -> "Negate(" ^ exp_to_abstract_string e ^ ")"
+  | Unop (_, e) -> "Negate(" ^ exp_to_abstract_string e ^ ")"
 	| Binop (b, e1, e2) ->
 			let binop_to_string (b : binop) : string =
 				match b with
