@@ -96,24 +96,25 @@ let new_varname =
 (* subst : varid -> expr -> expr -> expr
    Substitute repl for free occurrences of var_name in exp *)
 let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
-	let rec sub (exp : expr) : expr =
-		match exp with
-		| Var x -> if x = var_name then repl else exp
-		| Num _ | Bool _ | Raise | Unassigned -> exp
-		| Unop (n, e) -> Unop (n, sub e) 
+	let rec sub (ex : expr) : expr =
+		match ex with
+		| Var x -> if x = var_name then repl else ex
+		| Num _ | Bool _ | Raise | Unassigned -> ex
+		| Unop (n, e) -> Unop (n, sub e)
 		| Binop (b, e1, e2) -> Binop (b, sub e1, sub e2) 
 		| Conditional (e1, e2, e3) -> Conditional (sub e1, sub e2, sub e3)
-		| Fun (v, e) -> if v = var_name then exp
+		| Fun (v, e) -> if v = var_name then ex
 										else if SS.mem v (free_vars repl) then 
 											let z = new_varname () in
 											Fun (z, sub (subst v (Var z) e))
 										else Fun (v, sub e)
-		| Let (v, e1, e2) -> if v = var_name then Let (v, sub e1, e2)
+		| Let (v, d, b) -> if v = var_name then Let (v, sub d, b)
 													else if SS.mem v (free_vars repl) then
 														let z = new_varname () in
-														Let (z, sub e1, sub (subst v (Var z) e2))
-													else Let (v, sub e1, sub e2)
-		| Letrec (v, e1, e2) -> if v = var_name then Letrec (v, sub e1, e2)
+														Let (z, sub d, sub (subst v (Var z) b))
+													else Let (v, sub d, sub b)
+		| Letrec (v, e1, e2) -> if v = var_name then 
+		                          Letrec (v, Letrec (v, sub e1, sub e2), sub e2)
 														else if SS.mem v (free_vars repl) then
 														  let z = new_varname () in
 															Letrec (z, sub e1, sub (subst v (Var z) e2))
@@ -154,7 +155,7 @@ let rec exp_to_concrete_string (exp : expr) : string =
 	| Letrec (v, e1, e2) ->
 			"let rec " ^ v ^ " = " ^ exp_to_concrete_string e1
 			^ exp_to_concrete_string e2
-	| Raise -> "raise Evalexception"
+	| Raise -> "raise"
 	| Unassigned -> "unassigned"
 	| App (e1, e2) -> 
 			" in " ^ exp_to_concrete_string e1 ^ exp_to_concrete_string e2 ;;
@@ -191,4 +192,5 @@ let rec exp_to_abstract_string (exp : expr) : string =
   | Raise -> "Raise"
   | Unassigned -> "Unassigned"
 	| App (e1, e2) -> 
-			"App(" ^ exp_to_abstract_string e1 ^ ", " ^ exp_to_abstract_string e2 ^ ")" ;;
+			"App(" ^ exp_to_abstract_string e1 ^ ", " 
+			^ exp_to_abstract_string e2 ^ ")" ;;

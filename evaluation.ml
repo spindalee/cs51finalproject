@@ -99,8 +99,49 @@ let eval_t (exp : expr) (_env : Env.env) : Env.value =
 
 (* The SUBSTITUTION MODEL evaluator -- to be completed *)
    
-let eval_s (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_s not implemented" ;;
+let rec eval_s (exp : expr) (_env : Env.env) : Env.value =
+	let rec eval (ex : expr) : expr =
+		match ex with
+		| Var x -> raise (EvalError "can't evaluate unbound variable")
+		| Num _ | Bool _ -> ex
+		| Unop (v, e1) -> 
+				let unopeval (v : unop) (e1 : expr) =
+					match v, e1 with
+					| Negate, Num n -> Num (~- n)
+					| Negate, Bool b -> Bool (not b) 
+					| Negate, _ -> raise (EvalError "can't negate non-ints or non-bools")
+				in unopeval v e1
+		| Binop (v, e1, e2) ->
+				let binopeval (v : binop) (e1 : expr) (e2 : expr) : expr =
+					match v, e1, e2 with
+					| Plus, Num x1, Num x2 -> Num (x1 + x2)
+					| Plus, _, _ -> raise (EvalError "can't add non-integers")
+					| Minus, Num x1, Num x2 -> Num (x1 - x2)
+					| Minus, _, _ -> raise (EvalError "can't subtract non-integers")
+					| Times, Num x1, Num x2 -> Num (x1 * x2)
+					| Times, _, _ -> raise (EvalError "can't multiply non-integers")
+					| Equals, Num x1, Num x2 -> Bool (x1 = x2)
+					| Equals, _, _ -> raise (EvalError "can't equal non-integers") 
+					| LessThan, Num x1, Num x2 -> Bool (x1 < x2)
+					| LessThan, _, _ -> raise (EvalError "can't compare non-integers")
+				in binopeval v e1 e2
+		| Conditional (e1, e2, e3) ->
+				(match eval e1 with
+				| Bool b -> if b then eval e2 else eval e3
+				| _ -> raise (EvalError "can't evaluate non-bools in conditional"))
+		| Fun (_v, _e) -> ex
+		| Let (v, d, b) -> eval (App (Fun (v, b), d))
+		| Letrec (v, d, b) ->
+				let vd = eval d in
+				let evalrec = Letrec (v, vd, Var v) in
+		    eval (subst v (subst v evalrec vd) b)
+		| Raise -> raise EvalException
+		| Unassigned -> ex
+		| App (f, d) ->
+				match eval f with
+				| Fun (v, e) -> eval (subst v (eval d) e)
+				| _ -> raise (EvalError "can't evaluate non-functions")
+	in Env.Val (eval exp) ;;
      
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
@@ -130,4 +171,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_t ;;
+let evaluate = eval_s ;;
