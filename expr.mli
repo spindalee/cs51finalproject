@@ -34,6 +34,7 @@ type expr =
   | Let of varid * expr * expr           (* local naming *)
   | Letrec of varid * expr * expr        (* recursive local naming *)
   | Raise                                (* exceptions *)
+  | RaiseExn
   | Unassigned                           (* (temporarily) unassigned *)
   | App of expr * expr                   (* function applications *)
 ;;

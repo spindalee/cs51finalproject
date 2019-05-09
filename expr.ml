@@ -31,7 +31,8 @@ type expr =
   | Fun of varid * expr                  (* function definitions *)
   | Let of varid * expr * expr           (* local naming *)
   | Letrec of varid * expr * expr        (* recursive local naming *)
-  | Raise                                (* exceptions *)
+	| Raise                                (* exceptions *)
+	| RaiseExn
   | Unassigned                           (* (temporarily) unassigned *)
   | App of expr * expr                   (* function applications *)
 ;;
@@ -66,14 +67,13 @@ let vars_of_list : string list -> varidset =
 let rec free_vars (exp : expr) : varidset =
 	match exp with
 	| Var x -> SS.singleton x
-	| Num _ | Bool _ | Raise | Unassigned -> SS.empty
+	| Num _ | Bool _ | Raise | RaiseExn | Unassigned -> SS.empty
 	| Unop (_, e) -> free_vars e
 	| Binop (_, e1, e2) | App (e1, e2) -> SS.union (free_vars e1) (free_vars e2)
 	| Conditional (e1, e2, e3) -> 
 			SS.union (free_vars e1) (SS.union (free_vars e2) (free_vars e3))
 	| Fun (v, e) -> SS.remove v (free_vars e)
-	| Let (v, e1, e2)
-	| Letrec (v, e1, e2) ->
+	| Let (v, e1, e2) | Letrec (v, e1, e2) ->
 			SS.union (SS.remove v (free_vars e2)) (free_vars e1) ;;
   
 (* new_varname : unit -> varid
@@ -99,7 +99,7 @@ let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
 	let rec sub (ex : expr) : expr =
 		match ex with
 		| Var x -> if x = var_name then repl else ex
-		| Num _ | Bool _ | Raise | Unassigned -> ex
+		| Num _ | Bool _ | Raise | RaiseExn | Unassigned -> ex
 		| Unop (n, e) -> Unop (n, sub e)
 		| Binop (b, e1, e2) -> Binop (b, sub e1, sub e2) 
 		| Conditional (e1, e2, e3) -> Conditional (sub e1, sub e2, sub e3)
@@ -113,13 +113,13 @@ let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
 														let z = new_varname () in
 														Let (z, sub d, sub (subst v (Var z) b))
 													else Let (v, sub d, sub b)
-		| Letrec (v, e1, e2) -> if v = var_name then 
-		                          Letrec (v, Letrec (v, sub e1, sub e2), sub e2)
+		| Letrec (v, d, b) -> if v = var_name then ex
 														else if SS.mem v (free_vars repl) then
 														  let z = new_varname () in
-															Letrec (z, sub e1, sub (subst v (Var z) e2))
-														else Letrec (v, sub e1, sub e2)
-		| App (e1, e2) -> App (sub e1, sub e2)
+															Letrec (z, sub (subst v (Var z) d), 
+															        sub (subst v (Var z) b))
+														else Letrec (v, sub d, sub b)
+		| App (f, d) -> App (sub f, sub d)
 	in sub exp ;;
 
 (*......................................................................
@@ -134,7 +134,7 @@ let rec exp_to_concrete_string (exp : expr) : string =
   | Var x -> "x"
   | Num n -> string_of_int n
   | Bool b -> string_of_bool b
-	| Unop (_, e) -> "negate " ^ exp_to_concrete_string e
+	| Unop (_, e) -> "~- " ^ exp_to_concrete_string e
   | Binop (b, e1, e2) ->
 			let binop_to_string (b : binop) : string =
 				match b with
@@ -144,30 +144,32 @@ let rec exp_to_concrete_string (exp : expr) : string =
 				| Equals -> "="
 				| LessThan -> "<"
 			in
-			exp_to_concrete_string e1 ^ binop_to_string b ^ 
+			exp_to_concrete_string e1 ^ " " ^ binop_to_string b ^ " " ^
 			exp_to_concrete_string e2
 	| Conditional (e1, e2, e3) -> 
 			"if " ^ exp_to_concrete_string e1 ^ " then " ^ exp_to_concrete_string e2
 			^ " else " ^ exp_to_concrete_string e3
 	| Fun (v, e) -> "fun " ^ v ^ " -> " ^ exp_to_concrete_string e
 	| Let (v, e1, e2) -> 
-			"let " ^ v ^ " = " ^ exp_to_concrete_string e1 ^ exp_to_concrete_string e2
+			"let " ^ v ^ " = " ^ exp_to_concrete_string e1 ^ " in " 
+			^ exp_to_concrete_string e2
 	| Letrec (v, e1, e2) ->
 			"let rec " ^ v ^ " = " ^ exp_to_concrete_string e1
 			^ exp_to_concrete_string e2
-	| Raise -> "raise"
+	| Raise -> "raise Evalexception"
+	| RaiseExn -> "raise ImpossibleCase"
 	| Unassigned -> "unassigned"
 	| App (e1, e2) -> 
-			" in " ^ exp_to_concrete_string e1 ^ exp_to_concrete_string e2 ;;
+			exp_to_concrete_string e1 ^ " " ^ exp_to_concrete_string e2 ;;
 
 (* exp_to_abstract_string : expr -> string
    Returns a string representation of the abstract syntax of the expr *)
 let rec exp_to_abstract_string (exp : expr) : string =
 	match exp with
-	| Var x -> "Var (" ^ x ^ ")"
+	| Var x -> "Var(" ^ x ^ ")"
   | Num n -> "Num(" ^ string_of_int n ^ ")"
   | Bool b -> "Bool(" ^ string_of_bool b ^ ")"
-  | Unop (_, e) -> "Negate(" ^ exp_to_abstract_string e ^ ")"
+  | Unop (n, e) -> "Unop(Negate, " ^ exp_to_abstract_string e ^ ")"
 	| Binop (b, e1, e2) ->
 			let binop_to_string (b : binop) : string =
 				match b with
@@ -189,7 +191,8 @@ let rec exp_to_abstract_string (exp : expr) : string =
 	| Letrec (v, e1, e2) ->
 			"Letrec(" ^ v ^ ", " ^ exp_to_abstract_string e1 ^ ", "
 			^ exp_to_abstract_string e2 ^ ")"
-  | Raise -> "Raise"
+	| Raise -> "Raise(EvalException)"
+	| RaiseExn -> "RaiseExn(ImpossibleCase)"
   | Unassigned -> "Unassigned"
 	| App (e1, e2) -> 
 			"App(" ^ exp_to_abstract_string e1 ^ ", " 

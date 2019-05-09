@@ -18,6 +18,7 @@
 %token IF THEN ELSE 
 %token FUNCTION
 %token RAISE
+%token RAISEEXN
 %token <string> ID
 %token <int> INT 
 %token TRUE FALSE
@@ -53,6 +54,7 @@ expnoapp: INT                   { Num $1 }
         | LET REC ID EQUALS exp IN exp  { Letrec($3, $5, $7) }
         | FUNCTION ID DOT exp   { Fun($2, $4) } 
         | RAISE                 { Raise }
+        | RAISEEXN              { RaiseExn }
         | OPEN exp CLOSE        { $2 }
 ;
 

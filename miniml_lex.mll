@@ -21,6 +21,7 @@
                        ("else", ELSE);
                        ("let", LET);
                        ("raise", RAISE);
+                       ("raiseexn", RAISEEXN);
                        ("rec", REC);
                        ("true", TRUE);
                        ("false", FALSE);

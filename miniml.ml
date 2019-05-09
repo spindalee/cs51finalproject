@@ -45,13 +45,16 @@ let repl () =
            just extract the expr back out and print it *)
         match res with
         | Val resexp ->
-           printf "==> %s\n" (Ex.exp_to_concrete_string resexp)
-        | _ -> failwith "not handling other cases yet"
+           printf "==> %s\n" (Ex.exp_to_abstract_string resexp)
+        | Closure _ ->
+           printf "==> [%s]\n" (Ev.Env.value_to_string res)
            
       with
       | Parsing.Parse_error -> printf "xx> parse error\n"
       | Ev.EvalError msg -> printf "xx> evaluation error: %s\n" msg
       | Ev.EvalException -> printf "xx> evaluation exception\n"
+      | Ev.ImpossibleCase -> printf "xx> impossible case\n"
+      | Ev.TypeError msg -> printf "xx> type error: %s\n" msg
       | End_of_file -> printf "Goodbye.\n"; exit 0
     );
     flush stdout
