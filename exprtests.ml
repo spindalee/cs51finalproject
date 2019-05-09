@@ -69,7 +69,7 @@ let exp_to_abstract_string_test () =
 	unit_test (exp_to_abstract_string (Let ("x", Num 3, Var "x")) = "Let(x, Num(3), Var(x))") "exp_to_abstract_string let";
 	unit_test (exp_to_abstract_string (Letrec ("x", Num 3, Var "x")) = "Letrec(x, Num(3), Var(x))") "exp_to_abstract_string letrec";
 	unit_test (exp_to_abstract_string Raise = "Raise(EvalException)") "exp_to_abstract_string raise";
-	unit_test (exp_to_abstract_string RaiseExn = "RaiseExn(ImpossibleCase") "exp_to_abstract_string raiseexn";
+	unit_test (exp_to_abstract_string RaiseExn = "RaiseExn(ImpossibleCase)") "exp_to_abstract_string raiseexn";
 	unit_test (exp_to_abstract_string (App (Fun ("f", Var "x"), Num 3)) = "App(Fun(f, Var(x)), Num(3))") "exp_to_abstract_string app" ;;
 
 let test_all () =
