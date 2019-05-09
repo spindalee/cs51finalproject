@@ -103,22 +103,24 @@ let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
 		| Unop (n, e) -> Unop (n, sub e)
 		| Binop (b, e1, e2) -> Binop (b, sub e1, sub e2) 
 		| Conditional (e1, e2, e3) -> Conditional (sub e1, sub e2, sub e3)
-		| Fun (v, e) -> if v = var_name then ex
-										else if SS.mem v (free_vars repl) then 
-											let z = new_varname () in
-											Fun (z, sub (subst v (Var z) e))
-										else Fun (v, sub e)
-		| Let (v, d, b) -> if v = var_name then Let (v, sub d, b)
-													else if SS.mem v (free_vars repl) then
-														let z = new_varname () in
-														Let (z, sub d, sub (subst v (Var z) b))
-													else Let (v, sub d, sub b)
-		| Letrec (v, d, b) -> if v = var_name then ex
-														else if SS.mem v (free_vars repl) then
-														  let z = new_varname () in
-															Letrec (z, sub (subst v (Var z) d), 
-															        sub (subst v (Var z) b))
-														else Letrec (v, sub d, sub b)
+		| Fun (v, e) -> 
+				if v = var_name then ex
+				else if SS.mem v (free_vars repl) then 
+				  let z = new_varname () in
+				  Fun (z, sub (subst v (Var z) e))
+				else Fun (v, sub e)
+		| Let (v, d, b) -> 
+				if v = var_name then Let (v, sub d, b)
+				else if SS.mem v (free_vars repl) then
+					let z = new_varname () in
+					Let (z, sub d, sub (subst v (Var z) b))
+				else Let (v, sub d, sub b)
+		| Letrec (v, d, b) -> 
+				if v = var_name then ex
+				else if SS.mem v (free_vars repl) then
+					let z = new_varname () in
+					Letrec (z, sub (subst v (Var z) d), sub (subst v (Var z) b))
+				else Letrec (v, sub d, sub b)
 		| App (f, d) -> App (sub f, sub d)
 	in sub exp ;;
 
