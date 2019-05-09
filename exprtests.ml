@@ -72,7 +72,6 @@ let exp_to_abstract_string_test () =
 	unit_test (exp_to_abstract_string RaiseExn = "RaiseExn(ImpossibleCase") "exp_to_abstract_string raiseexn";
 	unit_test (exp_to_abstract_string (App (Fun ("f", Var "x"), Num 3)) = "App(Fun(f, Var(x)), Num(3))") "exp_to_abstract_string app" ;;
 
-
 let test_all () =
 	free_vars_test ();
 	new_varname_test ();

@@ -70,15 +70,16 @@ module Env : Env_type =
 			match v with
 			| Val e -> exp_to_concrete_string e
 			| Closure (exp, env) -> 
-					if printenvp then exp_to_concrete_string exp ^ env_to_string env
+					if printenvp then 
+					  "[" ^ env_to_string env ^ " |-> " ^ exp_to_concrete_string exp ^ "]"
 					else exp_to_concrete_string exp
 
     (* Returns a printable string representation of an environment *)
     and env_to_string (env : env) : string =
 			match env with
-			| [] -> ""
+			| [] -> "{}"
 			| (var, valref) :: tl -> 
-			    var ^ value_to_string !valref ^ env_to_string tl ;;
+			    "{" ^ var ^ " |-> " ^ value_to_string !valref ^ "}" ^ env_to_string tl ;;
   end
 ;;
 
