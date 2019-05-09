@@ -53,10 +53,10 @@ module Env : Env_type =
 
     (* Looks up the value of a variable in the environment *)
     let lookup (env : env) (varname : varid) : value =
-			try
-				!(List.assoc varname env)
-			with
-			| Not_found -> raise (EvalError "variable has no value")
+      try
+        !(List.assoc varname env)
+      with
+      | Not_found -> raise (EvalError "variable has no value")
 
     (* Returns a new environment just like env except that it maps the
        variable varid to loc *)
@@ -67,19 +67,19 @@ module Env : Env_type =
        printenvp determines whether to include the environment in the
        string representation when called on a closure *)
     let rec value_to_string ?(printenvp : bool = true) (v : value) : string =
-			match v with
-			| Val e -> exp_to_concrete_string e
-			| Closure (exp, env) -> 
-					if printenvp then 
-					  "[" ^ env_to_string env ^ " |-> " ^ exp_to_concrete_string exp ^ "]"
-					else exp_to_concrete_string exp
+      match v with
+      | Val e -> exp_to_concrete_string e
+      | Closure (exp, env) -> 
+          if printenvp then 
+            "[" ^ env_to_string env ^ " |-> " ^ exp_to_concrete_string exp ^ "]"
+          else exp_to_concrete_string exp
 
     (* Returns a printable string representation of an environment *)
     and env_to_string (env : env) : string =
-			match env with
-			| [] -> "{}"
-			| (var, valref) :: tl -> 
-			    "{" ^ var ^ " |-> " ^ value_to_string !valref ^ "}" ^ env_to_string tl ;;
+      match env with
+      | [] -> "{}"
+      | (var, valref) :: tl -> 
+          "{" ^ var ^ " |-> " ^ value_to_string !valref ^ "}" ^ env_to_string tl ;;
   end
 ;;
 
@@ -114,102 +114,102 @@ let eval_t (exp : expr) (_env : Env.env) : Env.value =
 
 (* Helper functions to evaluate unops and binops *)
 let unopeval (v : unop) (e1 : Env.value) : Env.value =
-	match v, e1 with
-	| Negate, Env.Val Num n -> Env.Val (Num (~- n))
-	| Negate, _ -> raise (TypeError "can't negate non-ints or non-bools") ;;
+  match v, e1 with
+  | Negate, Env.Val Num n -> Env.Val (Num (~- n))
+  | Negate, _ -> raise (TypeError "can't negate non-ints or non-bools") ;;
 
 let binopeval (v : binop) (e1 : Env.value) (e2 : Env.value) : Env.value =
-	match v, e1, e2 with
-	| Plus, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Num (x1 + x2))
-	| Plus, _, _ -> raise (TypeError "can't add non-integers")
-	| Minus, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Num (x1 - x2))
-	| Minus, _, _ -> raise (TypeError "can't subtract non-integers")
-	| Times, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Num (x1 * x2))
-	| Times, _, _ -> raise (TypeError "can't multiply non-integers")
-	| Equals, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Bool (x1 = x2))
-	| Equals, Env.Val Bool b1, Env.Val Bool b2 -> Env.Val (Bool (b1 = b2))
-	| Equals, _, _ -> raise (TypeError "can't equal non-integers") 
-	| LessThan, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Bool (x1 < x2))
-	| LessThan, _, _ -> raise (TypeError "can't compare non-integers") ;;
+  match v, e1, e2 with
+  | Plus, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Num (x1 + x2))
+  | Plus, _, _ -> raise (TypeError "can't add non-integers")
+  | Minus, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Num (x1 - x2))
+  | Minus, _, _ -> raise (TypeError "can't subtract non-integers")
+  | Times, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Num (x1 * x2))
+  | Times, _, _ -> raise (TypeError "can't multiply non-integers")
+  | Equals, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Bool (x1 = x2))
+  | Equals, Env.Val Bool b1, Env.Val Bool b2 -> Env.Val (Bool (b1 = b2))
+  | Equals, _, _ -> raise (TypeError "can't equal non-integers") 
+  | LessThan, Env.Val Num x1, Env.Val Num x2 -> Env.Val (Bool (x1 < x2))
+  | LessThan, _, _ -> raise (TypeError "can't compare non-integers") ;;
 
 (* The SUBSTITUTION MODEL evaluator -- to be completed *)
 
 let rec eval_s (exp : expr) (_env : Env.env) : Env.value =
-	match exp with
-	| Var _ -> raise (EvalError "can't evaluate unbound variable")
-	| Num _ | Bool _ | Fun _ | Unassigned -> Env.Val exp
-	| Unop (v, e1) -> unopeval v (eval_s e1 _env)
-	| Binop (v, e1, e2) -> binopeval v (eval_s e1 _env) (eval_s e2 _env)
-	| Conditional (e1, e2, e3) ->
-			(match eval_s e1 _env with
-			 | Env.Val Bool b -> if b then eval_s e2 _env else eval_s e3 _env
-			 | _ -> raise (TypeError "can't evaluate non-bools in conditional"))
-	| Let (v, d, b) -> eval_s (App (Fun (v, b), d)) _env
-	| Letrec (v, d, b) ->
-			let Env.Val vd = eval_s d _env in
-			let evalrec = Letrec (v, vd, Var v) in
-			eval_s (subst v (subst v evalrec vd) b) _env
-	| Raise -> raise EvalException
-	| RaiseExn -> raise ImpossibleCase
-	| App (f, d) ->
-			(match eval_s f _env with
-			| Env.Val Fun (v, e) -> 
-					let Env.Val vd = eval_s d _env in
-					eval_s (subst v vd e) _env
-			| _ -> Env.Val RaiseExn) ;;
-		 
+  match exp with
+  | Var _ -> raise (EvalError "can't evaluate unbound variable")
+  | Num _ | Bool _ | Fun _ | Unassigned -> Env.Val exp
+  | Unop (v, e1) -> unopeval v (eval_s e1 _env)
+  | Binop (v, e1, e2) -> binopeval v (eval_s e1 _env) (eval_s e2 _env)
+  | Conditional (e1, e2, e3) ->
+      (match eval_s e1 _env with
+       | Env.Val Bool b -> if b then eval_s e2 _env else eval_s e3 _env
+       | _ -> raise (TypeError "can't evaluate non-bools in conditional"))
+  | Let (v, d, b) -> eval_s (App (Fun (v, b), d)) _env
+  | Letrec (v, d, b) ->
+      let Env.Val vd = eval_s d _env in
+      let evalrec = Letrec (v, vd, Var v) in
+      eval_s (subst v (subst v evalrec vd) b) _env
+  | Raise -> raise EvalException
+  | RaiseExn -> raise ImpossibleCase
+  | App (f, d) ->
+      (match eval_s f _env with
+      | Env.Val Fun (v, e) -> 
+          let Env.Val vd = eval_s d _env in
+          eval_s (subst v vd e) _env
+      | _ -> Env.Val RaiseExn) ;;
+     
 (* THE EVALUATION HELPER ABSTRACTOR -- abstracts away commonalities *)
 let rec eval_h (exp : expr) 
-							 (env : Env.env) 
-							 (eval : expr -> Env.env -> Env.value) 
-							 : Env.value =
-	match exp with
-	| Var x -> Env.lookup env x
-	| Num _ | Bool _ | Unassigned -> Env.Val exp
-	| Unop (v, e1) -> unopeval v (eval_h e1 env eval)
-	| Binop (v, e1, e2) -> binopeval v (eval_h e1 env eval) (eval_h e2 env eval)
-	| Conditional (e1, e2, e3) ->
-			(match eval_h e1 env eval with
-			| Env.Val Bool b -> if b then eval_h e2 env eval else eval_h e3 env eval
-			| _ -> raise (TypeError "can't evaluate non-bools in conditional"))
-	| Let (v, d, b) -> eval_h (App (Fun (v, b), d)) env eval
-	| Letrec (v, d, b) ->
-			let temp = ref (Env.Val Unassigned) in
-			let new_env = Env.extend env v temp in
-			temp := eval_h d new_env eval;
-			eval_h b new_env eval
-	| Raise -> raise EvalException
-	| RaiseExn -> raise ImpossibleCase
-	| _ -> eval exp env ;;
+               (env : Env.env) 
+               (eval : expr -> Env.env -> Env.value) 
+               : Env.value =
+  match exp with
+  | Var x -> Env.lookup env x
+  | Num _ | Bool _ | Unassigned -> Env.Val exp
+  | Unop (v, e1) -> unopeval v (eval_h e1 env eval)
+  | Binop (v, e1, e2) -> binopeval v (eval_h e1 env eval) (eval_h e2 env eval)
+  | Conditional (e1, e2, e3) ->
+      (match eval_h e1 env eval with
+      | Env.Val Bool b -> if b then eval_h e2 env eval else eval_h e3 env eval
+      | _ -> raise (TypeError "can't evaluate non-bools in conditional"))
+  | Let (v, d, b) -> eval_h (App (Fun (v, b), d)) env eval
+  | Letrec (v, d, b) ->
+      let temp = ref (Env.Val Unassigned) in
+      let new_env = Env.extend env v temp in
+      temp := eval_h d new_env eval;
+      eval_h b new_env eval
+  | Raise -> raise EvalException
+  | RaiseExn -> raise ImpossibleCase
+  | _ -> eval exp env ;;
 
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
    
 let rec eval_d (exp : expr) (env : Env.env) : Env.value =
-	match exp with
-	| Fun _ -> Env.Val exp
-	| App (f, d) ->
-			(match eval_d f env with
-			| Env.Val Fun (v, e) ->
-					let eval_def = eval_d d env in
-					eval_d e (Env.extend env v (ref eval_def))
-			| _ -> Env.Val RaiseExn)
-	| _ -> eval_h exp env eval_d ;;
+  match exp with
+  | Fun _ -> Env.Val exp
+  | App (f, d) ->
+      (match eval_d f env with
+      | Env.Val Fun (v, e) ->
+          let eval_def = eval_d d env in
+          eval_d e (Env.extend env v (ref eval_def))
+      | _ -> Env.Val RaiseExn)
+  | _ -> eval_h exp env eval_d ;;
        
 (* The LEXICALLY-SCOPED ENVIRONMENT MODEL evaluator -- optionally
    completed as (part of) your extension *)
    
 let rec eval_l (exp : expr) (env : Env.env) : Env.value =
-	match exp with
-	| Fun _ -> Env.close exp env
-	| App (f, d) ->
-			(match eval_l f env with
-			| Closure (Fun (v, e), en) ->
-					let evaldef = ref (eval_l d env) in
-					let new_env = Env.extend en v evaldef in
-					eval_l e new_env
-			| Val _ -> Env.Val RaiseExn)
-	| _ -> eval_h exp env eval_l ;;
+  match exp with
+  | Fun _ -> Env.close exp env
+  | App (f, d) ->
+      (match eval_l f env with
+      | Closure (Fun (v, e), en) ->
+          let evaldef = ref (eval_l d env) in
+          let new_env = Env.extend en v evaldef in
+          eval_l e new_env
+      | Val _ -> Env.Val RaiseExn)
+  | _ -> eval_h exp env eval_l ;;
 
 (* The EXTENDED evaluator -- if you want, you can provide your
    extension as a separate evaluator, or if it is type- and
